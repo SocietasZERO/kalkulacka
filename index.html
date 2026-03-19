@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta name="author" content="Leo Prutkay">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O2 SCOUT</title>
+    <style>
+        :root { --o2-blue: #0050ff; --accent: #00e0ff; --text-dark: #333; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--o2-blue); color: white; padding: 15px; display: flex; justify-content: center; margin: 0; overflow-x: hidden; }
+        .app { background: white; color: var(--text-dark); padding: 25px; border-radius: 20px; width: 100%; max-width: 550px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; }
+        
+        /* ELEGANTNÁ HLAVIČKA S DVOMA MENU */
+        .header { display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #eaeaea; }
+        .header h2 { color: var(--o2-blue); text-align: center; margin: 0; letter-spacing: 1px; font-size: 22px; }
+        .menu-icon-right { position: absolute; right: 0; font-size: 26px; color: var(--o2-blue); cursor: pointer; transition: 0.2s; padding: 5px; }
+        .menu-icon-left { position: absolute; left: 0; font-size: 26px; color: var(--o2-blue); cursor: pointer; transition: 0.2s; padding: 5px; }
+        .menu-icon-right:hover, .menu-icon-left:hover { transform: scale(1.1); }
+
+        /* TMAVÉ POZADIE PRE OBIDVE MENU */
+        .menu-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 999; display: none; opacity: 0; transition: opacity 0.3s; }
+        
+        /* SPOLOČNÝ DIZAJN PRE OBIDVE MENU A SCROLLOVANIE */
+        .side-menu-left, .side-menu-right { 
+            position: fixed; top: 0; height: 100vh; background: #fff; z-index: 1000; 
+            padding: 25px 20px; box-sizing: border-box; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; 
+        }
+        
+        .side-menu-left { left: -320px; width: 300px; box-shadow: 5px 0 20px rgba(0,0,0,0.15); transition: left 0.3s ease-in-out; }
+        .side-menu-left.open { left: 0; }
+        
+        .side-menu-right { right: -300px; width: 280px; box-shadow: -5px 0 20px rgba(0,0,0,0.15); transition: right 0.3s ease-in-out; }
+        .side-menu-right.open { right: 0; }
+
+        .menu-close { position: absolute; top: 15px; right: 20px; font-size: 24px; color: #888; cursor: pointer; font-weight: bold; transition: 0.2s; z-index: 1001; }
+        .menu-close:hover { color: #cc0000; }
+        .menu-title { font-size: 16px; font-weight: bold; color: var(--o2-blue); margin-top: 5px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f4ff; text-transform: uppercase; padding-right: 30px; }
+
+        /* DIZAJN NÁMIETOK (VO VNÚTRI ĽAVÉHO MENU) */
+        .objection-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 40px; }
+        .objection-item { background: #f8f9fa; border: 1px solid #ddd; border-radius: 10px; overflow: hidden; }
+        .objection-item.active { border-color: var(--o2-blue); box-shadow: 0 2px 8px rgba(0,80,255,0.1); }
+        .objection-title { padding: 14px 12px; font-weight: bold; font-size: 13px; color: #002d62; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .objection-title:hover { background: #f0f4ff; color: var(--o2-blue); }
+        .objection-title::after { content: '▼'; font-size: 10px; color: var(--o2-blue); transition: transform 0.3s; }
+        .active .objection-title::after { transform: rotate(180deg); }
+        
+        .objection-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; background: #f8f9fa; font-size: 12px; line-height: 1.5; color: #444; }
+        .active .objection-content { max-height: 2500px; padding: 12px; border-top: 1px dashed #ccc; }
+        
+        .psychology { font-size: 11px; color: #666; font-style: italic; margin-bottom: 8px; display: block; border-left: 2px solid #ccc; padding-left: 8px; }
+        .answer { color: #0050ff; font-weight: bold; margin-bottom: 4px; display: block; }
+        .speech { background: white; padding: 10px; border-radius: 6px; border-left: 3px solid var(--accent); color: #111; font-weight: 500; font-size: 13px; }
+        .pause { display: block; font-size: 10px; color: #d9534f; margin: 6px 0; font-weight: bold; text-transform: uppercase; }
+
+        /* ČLÁNKY (VO VNÚTRI PRAVÉHO MENU) */
+        .side-menu-right a { display: block; padding: 12px 10px; margin-bottom: 8px; background: #f8f9fa; color: #444; text-decoration: none; font-size: 14px; font-weight: bold; border-radius: 10px; border: 1px solid #eee; transition: 0.2s; }
+        .side-menu-right a:hover { background: #e6f0ff; color: var(--o2-blue); border-color: var(--o2-blue); padding-left: 15px; }
+
+        /* FORMULÁRE KALKULAČKY */
+        label { display: block; font-weight: bold; margin: 15px 0 5px; font-size: 13px; text-transform: uppercase; color: #555; }
+        input[type="number"], select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; margin-bottom: 5px; box-sizing: border-box; background: #fff; cursor: pointer; transition: 0.3s; }
+        input[type="number"]:focus, select:focus { border-color: var(--o2-blue); outline: none; box-shadow: 0 0 8px rgba(0,80,255,0.2); }
+        
+        .vydavky-box { background: #e6f0ff; border: 2px dashed #0050ff; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .vydavky-box label { color: #002d62; margin-top: 0; }
+        
+        .apps-checkboxes { display: flex; gap: 15px; margin-top: 10px; flex-wrap: wrap; }
+        .app-check-label { display: flex; align-items: center; font-size: 14px; color: #333; font-weight: bold; cursor: pointer; text-transform: none; }
+        .app-check-label input { width: 18px; height: 18px; margin-right: 6px; cursor: pointer; }
+
+        #smartTip { display: none; background: #e6fffa; color: #234e52; padding: 12px; border-radius: 8px; margin-top: 15px; font-weight: bold; border-left: 4px solid #38b2ac; font-size: 14px; animation: fadeIn 0.4s; }
+
+        /* PAUŠÁLY A INTERNETY BOX */
+        .pausal-box { background: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 15px; position: relative; animation: fadeIn 0.3s; }
+        .btn-odstran { position: absolute; top: 12px; right: 12px; background: #ffe6e6; color: #cc0000; border: 1px solid #ffb3b3; border-radius: 8px; cursor: pointer; padding: 5px 10px; font-size: 12px; font-weight: bold; }
+        .btn-odstran:hover { background: #ffcccc; }
+        .btn-pridaj { background: #e6f0ff; color: #0050ff; border: 2px dashed #0050ff; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 20px; transition: 0.2s; }
+        .btn-pridaj:hover { background: #cce0ff; }
+
+        .volaniaBox { display: none; background: #e6f0ff; border: 2px dashed #0050ff; padding: 10px 15px; border-radius: 10px; margin-top: 10px; }
+        .volania-label { display: flex; align-items: center; color: #0050ff; font-weight: bold; cursor: pointer; margin: 0; text-transform: none; font-size: 15px; }
+        .volania-label input { width: 22px; height: 22px; margin-right: 12px; cursor: pointer; }
+
+        .datovka-box { background: #fff; border: 2px solid #0050ff; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .flex-row input { margin-bottom: 0; text-align: center; font-weight: bold; color: var(--o2-blue); width: 80px; }
+        
+        .btn-vypocitaj { width: 100%; background: var(--accent); color: #002d62; border: none; padding: 18px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn-vypocitaj:hover { filter: brightness(1.1); }
+        
+        #vysledok { margin-top: 25px; padding: 20px; border-radius: 15px; display: none; background: #f0f4ff; border: 2px solid var(--o2-blue); }
+        .cena-velka { font-size: 28px; font-weight: 900; color: var(--o2-blue); margin: 5px 0; text-align: center; }
+        .polozka { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #ccc; font-weight: bold; }
+        .sub-polozka { font-size: 13px; margin-top: -5px; padding-left: 15px; display: flex; justify-content: space-between; margin-bottom: 8px;}
+        
+        .o2spolu-box { background: #e6e6ff; border: 1px solid #b3b3ff; border-radius: 10px; padding: 15px; margin-top: 15px; }
+        .o2spolu-title { font-weight: bold; color: #0000cc; font-size: 16px; margin-bottom: 8px; }
+        .o2spolu-vyhody { font-size: 13px; color: #333; line-height: 1.5; }
+
+        .aplikacie-box { background: #e6fffa; border: 2px solid #38b2ac; border-radius: 10px; padding: 15px; margin-top: 15px; text-align: center; }
+        .aplikacie-title { font-weight: bold; color: #234e52; font-size: 16px; margin-bottom: 5px; }
+        .aplikacie-text { font-size: 13px; color: #285e61; margin-bottom: 5px;}
+
+        .ceny-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .cena-box { padding: 15px; border-radius: 10px; text-align: center; }
+        .cena-ucet { background: #fff; border: 1px solid #ccc; }
+        .cena-faktura { background: #e6fffa; border: 2px solid #38b2ac; }
+        .cena-label { font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+
+        .uspora-box { background: #f8f9fa; color: #333; padding: 15px; border-radius: 10px; margin-top: 15px; text-align: center; font-size: 15px; border: 1px solid #ddd; }
+        .uspora-hodnota { font-size: 20px; font-weight: bold; margin-top: 5px; display: block; }
+
+        .btn-stiahnut { width: 100%; background: #28a745; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .btn-stiahnut:hover { background: #218838; }
+
+        /* TLAČOVÉ TRIKY */
+        .print-only { display: none; }
+        @media print {
+            body { background: white; padding: 0; color: black; }
+            .app { box-shadow: none; max-width: 100%; padding: 0; border: none; }
+            .header, .side-menu-right, .side-menu-left, .menu-overlay, .pausal-box, .vydavky-box, label, select, input, .btn-pridaj, .btn-vypocitaj, .apps-checkboxes, .btn-odstran, .datovka-box, .flex-row, .btn-stiahnut, #smartTip, .volaniaBox { display: none !important; }
+            #vysledok { display: block !important; border: none; background: white; padding: 0; margin-top: 0; }
+            #vysledok-h2 { color: black; border-bottom: 2px solid black; padding-bottom: 10px; margin-top: 0; text-align: center; display: block !important; margin-bottom: 20px; font-size: 20px;}
+            .cena-velka, .o2spolu-title, .aplikacie-title { color: black !important; }
+            .o2spolu-box, .aplikacie-box, .uspora-box, .cena-box { border: 1px solid #000; background: transparent !important; color: black !important; break-inside: avoid; }
+            .no-print { display: none !important; }
+            .print-only { display: inline !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="menu-overlay no-print" id="menuOverlay" onclick="zatvorVsetkyMenu()"></div>
+
+<div class="side-menu-left no-print" id="sideMenuLeft">
+    <div class="menu-close" onclick="zatvorVsetkyMenu()">✕</div>
+    <div class="menu-title">🛡️ Argumenty a Námietky</div>
+
+    <div class="objection-list" id="objectionList">
+        <div class="objection-item">
+            <div class="objection-title" onclick="toggleObjection(this)">⏳ "Nemám čas"</div>
+            <div class="objection-content">
+                <span class="answer">✅ Rýchla odpoveď:</span>
+                <div class="speech">"Rozumiem – práve preto to robím do 3 minút. Ak uvidíte, že to nedáva zmysel, poviem vám to ja sám."</div>
+                <div style="margin-top: 10px;"><span class="psychology">💡 Týmto preberáš kontrolu a okamžite znižuješ tlak na zákazníka.</span></div>
+            </div>
+        </div>
+
+        <div class="objection-item">
+            <div class="objection-title" onclick="toggleObjection(this)">🤝 "Som spokojný u svojho"</div>
+            <div class="objection-content">
+                <span class="psychology">Spokojnosť ≠ nemá záujem ušetriť. Znamená to len: "Nechcem riešiť zmenu, neviem čo to obnáša."</span>
+                <span class="answer">✅ Ako reagovať:</span>
+                <div class="speech">
+                    "Rád to počujem – to je vlastne dobrý znak."
+                    <span class="pause">(krátka pauza)</span>
+                    "Ja nechcem meniť to, čo vám funguje. Chcem vám len ukázať, či za to neplatíte viac ako treba. Lebo spokojnosť so službou a spokojnosť s cenou – to sú dve rôzne veci. Dobre hovorím?"
+                    <span class="pause">[Počkaj na áno]</span>
+                    "Práve preto tá kalkulácia – ak uvidíte, že je cena rovnaká alebo vyššia, sám vám poviem nech zostanete. Ale ak ušetríte 10, 15, 20 eur mesačne... to sú vaše peniaze."
+                </div>
+            </div>
+        </div>
+
+        <div class="objection-item">
+            <div class="objection-title" onclick="toggleObjection(this)">📧 "Pošlite mi to do mailu"</div>
+            <div class="objection-content">
+                <span class="answer">✅ Ako reagovať:</span>
+                <div class="speech">
+                    "Rozumiem – ale úprimne, mail vám nepomôže."
+                    <span class="pause">(nechaj to visieť vo vzduchu)</span>
+                    "Nie preto, že by som nechcel poslať – ale preto, že čísla bez kontextu nič nehovoria. Vy neviete čo porovnávate, ja neviem čo presne máte. A mail aj tak nikto neotvára."
+                    <span class="pause">(úsmev)</span>
+                    "Práve preto tá kalkulácia trvá 3 minúty – a odídete s jasným číslom, nie s ďalším mailom v schránke."
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="side-menu-right no-print" id="sideMenuRight">
+    <div class="menu-close" onclick="zatvorVsetkyMenu()">✕</div>
+    <div class="menu-title">📚 Predajné ťaháky</div>
+    <a href="https://zive.aktuality.sk/clanok/knmixxL/dvaja-nasi-operatori-spojili-svoje-siete-co-to-prinasa/" target="_blank" onclick="zatvorVsetkyMenu()">📶 Spojenie sietí O2 a Telekom</a>
+    <a href="https://zive.aktuality.sk/clanok/feaJf24/telekom-stratil-viac-ako-220-tisic-klientov-zisk-aj-vynosy-vsak-narastli-co-je-za-tym/" target="_blank" onclick="zatvorVsetkyMenu()">📉 Telekom prišiel o 220-tisíc klientov</a>
+</div>
+
+<div class="app">
+    
+    <div class="header no-print">
+        <div class="menu-icon-left" onclick="otvorLaveMenu()">☰</div>
+        <h2><a href="https://www.o2.sk/" target="_blank" style="text-decoration: none; color: inherit;">O2 SCOUT</a></h2>
+        <div class="menu-icon-right" onclick="otvorPraveMenu()">☰</div>
+    </div>
+
+    <h2 id="vysledok-h2" class="print-only">O2 SCOUT</h2>
+    
+    <div class="vydavky-box">
+        <label>Súčasná faktúra zákazníka za služby (€):</label>
+        <input type="number" id="oldBill" placeholder="Napr. 25" step="0.01" oninput="ukazSmartTip()">
+        
+        <label style="margin-top:10px;">Aké predplatné si zákazník platí navyše?</label>
+        <div class="apps-checkboxes">
+            <label class="app-check-label"><input type="checkbox" id="chkNetflix" onchange="ukazSmartTip()"> Netflix (9,49€)</label>
+            <label class="app-check-label"><input type="checkbox" id="chkMax" onchange="ukazSmartTip()"> HBO Max (9,99€)</label>
+            <label class="app-check-label"><input type="checkbox" id="chkVoyo" onchange="ukazSmartTip()"> Voyo (7,99€)</label>
+        </div>
+        
+        <div id="smartTip"></div>
+    </div>
+
+    <label>1. Mobilné paušály:</label>
+    <div id="pausalyContainer"></div>
+    <button type="button" class="btn-pridaj" onclick="pridajPausal()">+ Pridať ďalší paušál</button>
+
+    <label>2. O2 Dátovka:</label>
+    <div class="datovka-box">
+        <label class="volania-label">
+            <input type="checkbox" id="datovkaCheck">
+            O2 Dátovka (30,74 € / s paušálom 15,37 €)
+        </label>
+    </div>
+
+    <label>3. Internet na doma (-3 € zľava):</label>
+    <div id="internetyContainer"></div>
+    <button type="button" class="btn-pridaj" onclick="pridajInternet()" style="background: #f0f4ff; color: #555; border-color: #ccc;">+ Pridať ďalší internet na doma</button>
+
+    <label>4. O2 Televízia:</label>
+    <select id="tvSelect">
+        <option value="0" data-name="Bez TV">--- Bez TV ---</option>
+        <option value="7" data-name="O2 TV Mini">O2 TV Mini (7,00 €)</option>
+        <option value="10" data-name="Veľká O2 TV">Veľká O2 TV (10,00 €)</option>
+    </select>
+
+    <label>5. Počet Set-top boxov (2,25 € / kus):</label>
+    <div class="flex-row">
+        <input type="number" id="stbCount" value="0" min="0" max="4">
+        <span style="font-size: 14px; color: #555;">x 2,25 €</span>
+    </div>
+
+    <button class="btn-vypocitaj" onclick="vypocitaj()">ZOBRAZIŤ PONUKU</button>
+
+    <div id="vysledok">
+        <div style="font-weight: bold; font-size: 16px; margin-bottom: 15px; color: var(--o2-blue); text-align: center;">Váš mesačný rozpis:</div>
+        <div id="rozpis"></div>
+
+        <div id="aplikacieContainer" style="display: none;">
+            <div class="aplikacie-box">
+                <div class="aplikacie-title">🎬 Prémiové predplatné</div>
+                <div class="aplikacie-text" id="aplikacieZadarmoText" style="color:#28a745; font-weight:bold;"></div>
+                <div class="aplikacie-text" id="aplikacieDoplatokText" style="color:#c53030;"></div>
+            </div>
+        </div>
+
+        <div id="o2spoluContainer" style="display: none;">
+            <div class="o2spolu-box">
+                <div class="o2spolu-title">🎁 Výhody O2 Spolu (<span id="pocetSluziebText"></span>)</div>
+                <div class="o2spolu-vyhody" id="o2spoluVyhodyText"></div>
+            </div>
+        </div>
+
+        <div class="ceny-grid">
+            <div class="cena-box cena-ucet">
+                <div class="cena-label" style="color: #666;">Faktúra (Bez odmeny)</div>
+                <div class="cena-velka" id="cenaBezOdratania" style="color: #555; font-size: 24px;"></div>
+                <div style="font-size: 11px; color: #888;">(Odmena príde na účet)</div>
+            </div>
+            <div class="cena-box cena-faktura">
+                <div class="cena-label" style="color: #234e52;">Konečná O2 Faktúra</div>
+                <div class="cena-velka" id="cenaSFakturou" style="color: #0050ff;"></div>
+                <div style="font-size: 11px; color: #234e52;">(Odmena stiahnutá z ceny)</div>
+            </div>
+        </div>
+
+        <div id="usporaText"></div>
+
+        <button class="btn-stiahnut" onclick="stiahniPDF()">📥 Stiahnuť / Zdieľať ponuku (PDF)</button>
+    </div>
+</div>
+
+<script>
+    let pausalCount = 0;
+    let internetCount = 0;
+
+    window.onload = function() {
+        pridajPausal();
+        pridajInternet(); // Pridá prvý box na internet hneď po načítaní
+    };
+
+    // OVLÁDANIE MENU (ĽAVÉ AJ PRAVÉ)
+    function otvorPraveMenu() {
+        document.getElementById("sideMenuRight").classList.add("open");
+        zobrazOverlay();
+    }
+
+    function otvorLaveMenu() {
+        document.getElementById("sideMenuLeft").classList.add("open");
+        zobrazOverlay();
+    }
+
+    function zobrazOverlay() {
+        let overlay = document.getElementById("menuOverlay");
+        overlay.style.display = "block";
+        setTimeout(() => { overlay.style.opacity = "1"; }, 10);
+    }
+
+    function zatvorVsetkyMenu() {
+        document.getElementById("sideMenuRight").classList.remove("open");
+        document.getElementById("sideMenuLeft").classList.remove("open");
+        let overlay = document.getElementById("menuOverlay");
+        overlay.style.opacity = "0";
+        setTimeout(() => { overlay.style.display = "none"; }, 300);
+    }
+
+    // ROZBAĽOVANIE NÁMIETOK
+    function toggleObjection(element) {
+        let parent = element.parentElement;
+        parent.classList.toggle('active');
+    }
+
+    // OSTATNÉ FUNKCIE KALKULAČKY
+    function stiahniPDF() {
+        var originalTitle = document.title;
+        document.title = "O2_SCOUT_Ponuka";
+        window.print();
+        setTimeout(function() {
+            document.title = originalTitle;
+        }, 1000);
+    }
+
+    function ukazSmartTip() {
+        var oldBill = parseFloat(document.getElementById("oldBill").value) || 0;
+        var hasNetflix = document.getElementById("chkNetflix").checked;
+        var hasMax = document.getElementById("chkMax").checked;
+        var hasVoyo = document.getElementById("chkVoyo").checked;
+
+        var appsCost = 0;
+        if(hasNetflix) appsCost += 9.49;
+        if(hasMax) appsCost += 9.99;
+        if(hasVoyo) appsCost += 7.99;
+
+        var currentTotal = oldBill + appsCost;
+        var tipBox = document.getElementById("smartTip");
+        var bestTip = "";
+
+        var pausalSelect = document.getElementById("pausalSelect1");
+        var selectedPausal = "";
+        if (pausalSelect && pausalSelect.selectedIndex > -1) {
+            selectedPausal = pausalSelect.options[pausalSelect.selectedIndex].getAttribute("data-name");
+        }
+
+        if (selectedPausal === "Základný paušál") {
+            if (hasNetflix && currentTotal >= 40.00) {
+                bestTip = "💡 Náš tip: Zákazník platí Netflix a jeho celkové staré výdavky sú cca " + currentTotal.toFixed(2) + " €. Prepnite to na <b>Bezstarostný paušál (40 €)</b>! Predplatné získa v cene a stále ušetrí oproti starej faktúre.";
+            } else if ((hasMax || hasVoyo) && currentTotal >= 29.00) {
+                bestTip = "💡 Náš tip: Zákazník platí " + (hasMax ? "HBO Max" : "Voyo") + " a výdavky má cca " + currentTotal.toFixed(2) + " €. Prepnite na <b>Pohodový paušál (29 €)</b>! Predplatné bude v cene paušálu a vo finále ušetrí.";
+            }
+        }
+
+        if (bestTip !== "") {
+            tipBox.innerHTML = bestTip;
+            tipBox.style.display = "block";
+        } else {
+            tipBox.style.display = "none";
+        }
+    }
+
+    function pridajPausal() {
+        pausalCount++;
+        let id = pausalCount;
+        let kontejner = document.getElementById('pausalyContainer');
+        
+        let div = document.createElement('div');
+        div.className = 'pausal-box';
+        div.id = 'pausalBox' + id;
+        
+        let odstranBtn = id > 1 ? `<button class="btn-odstran" onclick="odstranPausal(${id})">✕ Odstrániť</button>` : '';
+
+        div.innerHTML = `
+            <div style="font-weight:bold; margin-bottom:10px; color:#0050ff;">Paušál č. ${id}</div>
+            ${odstranBtn}
+            <select id="pausalSelect${id}" onchange="skontrolujPausal(${id})">
+                <option value="0" data-name="Žiadny paušál">--- Vyberte paušál ---</option>
+                <option value="10.25" data-name="O2 Junior">Junior (Cena 10,25 €)</option>
+                <option value="22" data-name="Základný paušál">Základný (Bude 18,00 € / Bonus HW: 2 €)</option>
+                <option value="33" data-name="Pohodový paušál">Pohodový (Bude 29,00 € / Bonus HW: 4 €)</option>
+                <option value="44" data-name="Bezstarostný paušál">Bezstarostný (Bude 40,00 € / Bonus HW: 7 €)</option>
+            </select>
+            <div id="volaniaBox${id}" class="volaniaBox">
+                <label class="volania-label">
+                    <input type="checkbox" id="volaniaCheck${id}">
+                    + Neobmedzené volania v EÚ (5,13 €)
+                </label>
+            </div>
+        `;
+        kontejner.appendChild(div);
+    }
+
+    function odstranPausal(id) {
+        let element = document.getElementById('pausalBox' + id);
+        if (element) {
+            element.remove();
+        }
+    }
+
+    // NOVÁ FUNKCIA NA PRIDÁVANIE INTERNETOV
+    function pridajInternet() {
+        internetCount++;
+        let id = internetCount;
+        let kontejner = document.getElementById('internetyContainer');
+        
+        let div = document.createElement('div');
+        div.className = 'pausal-box';
+        div.id = 'internetBox' + id;
+        
+        let odstranBtn = id > 1 ? `<button class="btn-odstran" onclick="odstranInternet(${id})">✕ Odstrániť</button>` : '';
+
+        div.innerHTML = `
+            <div style="font-weight:bold; margin-bottom:10px; color:#555;">Internet č. ${id}</div>
+            ${odstranBtn}
+            <select id="internetSelect${id}">
+                <option value="0" data-type="none" data-name="Bez internetu">--- Bez internetu na doma ---</option>
+                <optgroup label="Optika (Router za 1,25 €)">
+                    <option value="17.43" data-type="optika" data-name="Základná optika">Základná optika (Bude 14,43 € po zľave)</option>
+                    <option value="22.55" data-type="optika" data-name="Pohodová optika">Pohodová optika (Bude 19,55 € po zľave)</option>
+                    <option value="27.68" data-type="optika" data-name="Bezstarostná optika">Bezstarostná optika (Bude 24,68 € po zľave)</option>
+                </optgroup>
+                <optgroup label="Vzduchom (Anténa za 7,00 €)">
+                    <option value="15.38" data-type="vzduch" data-name="Základný internet vzduchom">Základný vzduchom (Bude 12,38 € po zľave)</option>
+                    <option value="21.53" data-type="vzduch" data-name="Pohodový internet vzduchom">Pohodový vzduchom (Bude 18,53 € po zľave)</option>
+                    <option value="26.65" data-type="vzduch" data-name="Bezstarostný internet vzduchom">Bezstarostný vzduchom (Bude 23,65 € po zľave)</option>
+                </optgroup>
+            </select>
+        `;
+        kontejner.appendChild(div);
+    }
+
+    function odstranInternet(id) {
+        let element = document.getElementById('internetBox' + id);
+        if (element) {
+            element.remove();
+        }
+    }
+
+    function skontrolujPausal(id) {
+        var pausal = document.getElementById("pausalSelect" + id);
+        var nazov = pausal.options[pausal.selectedIndex].getAttribute("data-name");
+        var okienko = document.getElementById("volaniaBox" + id);
+        var checkbox = document.getElementById("volaniaCheck" + id);
+
+        if (nazov === "Základný paušál") {
+            okienko.style.display = "block";
+        } else {
+            okienko.style.display = "none";
+            checkbox.checked = false; 
+        }
+        
+        ukazSmartTip();
+    }
+
+    function vypocitaj() {
+        var staraFaktura = parseFloat(document.getElementById("oldBill").value) || 0;
+        var hasNetflix = document.getElementById("chkNetflix").checked;
+        var hasMax = document.getElementById("chkMax").checked;
+        var hasVoyo = document.getElementById("chkVoyo").checked;
+
+        var appsCost = 0;
+        if(hasNetflix) appsCost += 9.49;
+        if(hasMax) appsCost += 9.99;
+        if(hasVoyo) appsCost += 7.99;
+
+        var celkoveStareVydavky = staraFaktura + appsCost;
+
+        var spolu = 0;
+        var html = "";
+        var pocetSluzieb = 0;
+        var pocetHlasovychPausalov = 0;
+        var celkovyBonusZariadenie = 0;
+        
+        var countPohodovy = 0;
+        var countBezstarostny = 0;
+
+        for (let i = 1; i <= pausalCount; i++) {
+            let selectElement = document.getElementById("pausalSelect" + i);
+            if (!selectElement) continue; 
+            let nazov = selectElement.options[selectElement.selectedIndex].getAttribute("data-name");
+            
+            if (nazov && nazov !== "Žiadny paušál") {
+                pocetHlasovychPausalov++;
+                if (nazov === "Základný paušál") celkovyBonusZariadenie += 2;
+                if (nazov === "Pohodový paušál") { celkovyBonusZariadenie += 4; countPohodovy++; }
+                if (nazov === "Bezstarostný paušál") { celkovyBonusZariadenie += 7; countBezstarostny++; }
+            }
+        }
+
+        for (let i = 1; i <= pausalCount; i++) {
+            let selectElement = document.getElementById("pausalSelect" + i);
+            if (!selectElement) continue; 
+
+            let zaklad = parseFloat(selectElement.value) || 0;
+            let nazov = selectElement.options[selectElement.selectedIndex].getAttribute("data-name");
+            let volaniaCheckbox = document.getElementById("volaniaCheck" + i);
+            let volaniaAktivne = volaniaCheckbox ? volaniaCheckbox.checked : false;
+
+            if (zaklad > 0) {
+                pocetSluzieb++;
+                
+                let cenaPoZlave = zaklad;
+                let maZlavu4e = false;
+
+                if (nazov !== "O2 Junior") {
+                    cenaPoZlave = zaklad - 4;
+                    maZlavu4e = true;
+                }
+                
+                spolu += cenaPoZlave;
+                html += `<div class="polozka"><span>📱 ${nazov}</span> <span>${cenaPoZlave.toFixed(2)} €</span></div>`;
+                
+                if (maZlavu4e) {
+                    html += `<div class="sub-polozka" style="color: #28a745;"><span>↳ <span class="no-print">Aplikovaná D2D zľava</span><span class="print-only">Zľava</span></span> <span>-4.00 €</span></div>`;
+                }
+
+                if (volaniaAktivne) {
+                    spolu += 5.13;
+                    html += `<div class="sub-polozka" style="color: #0050ff;"><span>↳ Neobmedzené volania v EÚ</span> <span>+5.13 €</span></div>`;
+                }
+            }
+        }
+
+        var datovkaAktivna = document.getElementById("datovkaCheck").checked;
+        if (datovkaAktivna) {
+            pocetSluzieb++;
+            let datovkaCena = (pocetHlasovychPausalov > 0) ? 15.37 : 30.74;
+            spolu += datovkaCena;
+            html += `<div class="polozka"><span>📱 O2 Dátovka</span> <span>${datovkaCena.toFixed(2)} €</span></div>`;
+            
+            if (pocetHlasovychPausalov > 0) {
+                html += `<div class="sub-polozka" style="color: #28a745;"><span>↳ Zľava k O2 Paušálu</span> <span>-15.37 €</span></div>`;
+            }
+        }
+
+        // CYKLUS PRE VŠETKY INTERNETY
+        for (let j = 1; j <= internetCount; j++) {
+            let intSelect = document.getElementById("internetSelect" + j);
+            if (!intSelect) continue;
+
+            let intZaklad = parseFloat(intSelect.value) || 0;
+            let intNazov = intSelect.options[intSelect.selectedIndex].getAttribute("data-name");
+            let intTyp = intSelect.options[intSelect.selectedIndex].getAttribute("data-type");
+
+            if (intZaklad > 0) {
+                pocetSluzieb++;
+                var intPoZlave = intZaklad - 3;
+                spolu += intPoZlave;
+                html += `<div class="polozka"><span>🌐 ${intNazov}</span> <span>${intPoZlave.toFixed(2)} €</span></div>`;
+                html += `<div class="sub-polozka" style="color: #28a745;"><span>↳ <span class="no-print">Aplikovaná D2D zľava</span><span class="print-only">Zľava</span></span> <span>-3.00 €</span></div>`;
+
+                var hwCena = (intTyp === 'vzduch') ? 7.00 : 1.25;
+                var hwNazov = (intTyp === 'vzduch') ? '5G Anténa / Router' : 'Wi-Fi Router (Optika)';
+
+                // Dynamické čerpanie bonusu na viaceré routre
+                var hwNaUhradu = hwCena;
+                if (celkovyBonusZariadenie >= hwCena) {
+                    hwNaUhradu = 0;
+                    celkovyBonusZariadenie -= hwCena;
+                } else if (celkovyBonusZariadenie > 0) {
+                    hwNaUhradu = hwCena - celkovyBonusZariadenie;
+                    celkovyBonusZariadenie = 0;
+                }
+
+                spolu += hwNaUhradu;
+
+                if (hwNaUhradu === 0) {
+                    html += `<div class="sub-polozka" style="color: #28a745;"><span>↳ ${hwNazov}</span> <span>0.00 € (Plne kryté bonusom)</span></div>`;
+                } else if (hwNaUhradu > 0 && hwNaUhradu < hwCena) {
+                    html += `<div class="sub-polozka" style="color: #e53e3e;"><span>↳ ${hwNazov}</span> <span>+${hwNaUhradu.toFixed(2)} € (Zvyšok po bonuse)</span></div>`;
+                } else {
+                    html += `<div class="sub-polozka" style="color: #e53e3e;"><span>↳ ${hwNazov}</span> <span>+${hwCena.toFixed(2)} €</span></div>`;
+                }
+            }
+        }
+
+        var tvSelect = document.getElementById("tvSelect");
+        var tvCena = parseFloat(tvSelect.value) || 0;
+        var tvNazov = tvSelect.options[tvSelect.selectedIndex].getAttribute("data-name");
+
+        if (tvCena > 0) {
+            pocetSluzieb++;
+            spolu += tvCena;
+            html += `<div class="polozka"><span>📺 ${tvNazov}</span> <span>${tvCena.toFixed(2)} €</span></div>`;
+        }
+
+        var stbPocet = parseInt(document.getElementById("stbCount").value) || 0;
+        var stbCena = stbPocet * 2.25;
+        if (stbCena > 0) {
+            spolu += stbCena;
+            html += `<div class="sub-polozka"><span>↳ ${stbPocet}x TV Set-top box</span> <span>+${stbCena.toFixed(2)} €</span></div>`;
+        }
+
+        if (spolu === 0) {
+            alert("Vyber aspoň jednu službu z ponuky.");
+            return;
+        }
+
+        var appsList = [];
+        if(hasMax) appsList.push({name: 'HBO Max', cost: 9.99});
+        if(hasNetflix) appsList.push({name: 'Netflix', cost: 9.49});
+        if(hasVoyo) appsList.push({name: 'Voyo', cost: 7.99});
+
+        appsList.sort((a, b) => b.cost - a.cost);
+
+        var coveredApps = [];
+        var outOfPocketApps = 0;
+        
+        for (let app of appsList) {
+            let isCovered = false;
+            if (app.name === 'Netflix') {
+                if (countBezstarostny > 0) {
+                    countBezstarostny--;
+                    isCovered = true;
+                    coveredApps.push(app.name);
+                }
+            } else {
+                if (countPohodovy > 0) {
+                    countPohodovy--;
+                    isCovered = true;
+                    coveredApps.push(app.name);
+                } else if (countBezstarostny > 0) {
+                    countBezstarostny--;
+                    isCovered = true;
+                    coveredApps.push(app.name);
+                }
+            }
+            if (!isCovered) {
+                outOfPocketApps += app.cost;
+            }
+        }
+
+        if (coveredApps.length > 0 || outOfPocketApps > 0) {
+            document.getElementById("aplikacieContainer").style.display = "block";
+            
+            if (coveredApps.length > 0) {
+                document.getElementById("aplikacieZadarmoText").innerHTML = `✅ V paušále ZADARMO: ${coveredApps.join(", ")}`;
+            } else {
+                document.getElementById("aplikacieZadarmoText").innerHTML = "";
+            }
+            
+            if (outOfPocketApps > 0) {
+                document.getElementById("aplikacieDoplatokText").innerHTML = `⚠️ Zákazník si naďalej platí bokom: +${outOfPocketApps.toFixed(2)} €`;
+            } else {
+                document.getElementById("aplikacieDoplatokText").innerHTML = "Zákazník má všetky svoje aplikácie pokryté O2!";
+                document.getElementById("aplikacieDoplatokText").style.color = "#28a745";
+            }
+        } else {
+            document.getElementById("aplikacieContainer").style.display = "none";
+        }
+
+        var odmenaO2Spolu = 0;
+        var textVyhod = "";
+        
+        if (pocetSluzieb === 2) {
+            textVyhod = "• Rezerva 10 GB pre skupinu<br>• Roaming bez obáv (1 GB v Zóne 2 na 24h)";
+        } else if (pocetSluzieb === 3) {
+            odmenaO2Spolu = 5;
+            textVyhod = "• Odmena 5 € mesačne<br>• Rezerva 20 GB pre skupinu<br>• Roaming bez obáv (1 GB v Zóne 2 na 24h)";
+        } else if (pocetSluzieb >= 4) {
+            odmenaO2Spolu = 10;
+            textVyhod = "• Odmena 10 € mesačne<br>• Rezerva 20 GB pre skupinu<br>• Roaming bez obáv (1 GB v Zóne 2 na 24h)";
+        }
+
+        document.getElementById("vysledok").style.display = "block";
+        document.getElementById("rozpis").innerHTML = html;
+
+        if (pocetSluzieb >= 2) {
+            document.getElementById("o2spoluContainer").style.display = "block";
+            document.getElementById("pocetSluziebText").innerText = pocetSluzieb + " služby";
+            document.getElementById("o2spoluVyhodyText").innerHTML = textVyhod;
+        } else {
+            document.getElementById("o2spoluContainer").style.display = "none";
+        }
+
+        var cenaSFakturou = spolu - odmenaO2Spolu;
+
+        document.getElementById("cenaBezOdratania").innerText = spolu.toFixed(2) + " €";
+        document.getElementById("cenaSFakturou").innerText = cenaSFakturou.toFixed(2) + " €";
+
+        if (celkoveStareVydavky > 0) {
+            var oldOutOfPocket = celkoveStareVydavky;
+            var newOutOfPocket = cenaSFakturou + outOfPocketApps;
+            var usporaMesacne = oldOutOfPocket - newOutOfPocket;
+            
+            if (usporaMesacne > 0) {
+                document.getElementById("usporaText").innerHTML = `
+                    <div class="uspora-box" style="background: #e6fffa; border-color: #38b2ac;">
+                        Mesačná úspora zákazníka (vrátane platených aplikácií):
+                        <span class="uspora-hodnota" style="color: #28a745;">${usporaMesacne.toFixed(2)} €</span>
+                        <hr style="border: 0; border-top: 1px dashed #ccc; margin: 10px 0;">
+                        Celková ročná úspora s O2:
+                        <span style="font-size: 24px; color: #234e52; font-weight: 900; display: block; margin-top: 5px;">${(usporaMesacne * 12).toFixed(2)} €</span>
+                    </div>`;
+            } else if (usporaMesacne < 0) {
+                var priplatok = Math.abs(usporaMesacne);
+                document.getElementById("usporaText").innerHTML = `
+                    <div class="uspora-box" style="background: #fff5f5; border-color: #feb2b2; color: #c53030;">
+                        Celkový mesačný rozdiel vo výdavkoch:
+                        <span class="uspora-hodnota">+ ${priplatok.toFixed(2)} €</span>
+                        <div style="font-size: 13px; margin-top: 8px; font-weight: normal;">Zákazník síce pripláca, no získava kompletne nové služby.</div>
+                    </div>`;
+            } else {
+                document.getElementById("usporaText").innerHTML = `
+                    <div class="uspora-box" style="background: #f8f9fa; border-color: #ddd; color: #333;">
+                        Celkový mesačný rozdiel vo výdavkoch:
+                        <span class="uspora-hodnota">0,00 €</span>
+                        <div style="font-size: 13px; margin-top: 8px; font-weight: normal;">Cena zostáva na cent rovnaká, no s nami má pridané hodnoty v cene!</div>
+                    </div>`;
+            }
+        } else {
+            document.getElementById("usporaText").innerHTML = "";
+        }
+    }
+</script>
+
+</body>
+</html>
